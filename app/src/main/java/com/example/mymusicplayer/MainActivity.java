@@ -4,12 +4,14 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -19,12 +21,12 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-
     RecyclerView musicListRecycler;
     ArrayList<Song> musicList;
     MusicListAdapter adapter;
@@ -43,18 +45,57 @@ public class MainActivity extends AppCompatActivity {
             getSongList();
             addRecyclerView(musicList);
         } else {
-//            Open a Dialog using the code below:
-            ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
-            getSongList();
-            addRecyclerView(musicList);
+            if (checkPermissions()) {
+                getSongList();
+                addRecyclerView(musicList);
+            } else {
+                requestPermissionss();
+            }
         }
 
     }
 
+    private boolean checkPermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED  &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Permission is not granted
+            return false;
+        }
+        return true;
+    }
+
+
+    private void requestPermissionss() {
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case 1: {
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    // permission was granted
+                    getSongList();
+                    addRecyclerView(musicList);
+                } else {
+                    // permission denied
+                    Toast.makeText(MainActivity.this, "Please grant the permission", Toast.LENGTH_SHORT).show();
+                }
+                return;
+            }
+        }
+    }
+
+
     public void getSongList() {
         //retrieve song info
         ContentResolver musicResolver = getContentResolver();
+
+//        Uri fileUri = MediaStore.Files.FileColumns.MEDIA_TYPE_NONE;
+//        Uri imagesUri = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
         Uri musicUri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+
         @SuppressLint("Recycle")
         Cursor musicCursor = musicResolver.query(musicUri, null, null, null, null);
 
